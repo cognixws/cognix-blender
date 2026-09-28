@@ -4,7 +4,7 @@ A [PiCode](https://github.com/cfpperche/picode) extension that lets your agents
 model in Blender: they build the scene through tools, render it, look at the
 result, and you watch it happen in Blender's own window.
 
-> Work in progress — see [docs/plan.md](docs/plan.md).
+> v0.1 — tools in [docs/tools.md](docs/tools.md), plan in [docs/plan.md](docs/plan.md).
 
 ## Install
 

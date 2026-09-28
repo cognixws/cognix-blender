@@ -1,8 +1,14 @@
 {
   "id": "blender",
   "name": "Blender",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "apiVersion": 1,
   "publisher": "PiCode",
-  "description": "Model in Blender with your agents: they build the scene, render it and look at the result."
+  "description": "Model in Blender with your agents: they build the scene, render it and look at the result.",
+  "agent": {
+    "mcpServers": {
+      "blender": { "command": "python3", "args": ["${extensionDir}/server/picode_blender.py"] }
+    },
+    "skills": ["skills/blender-modeling"]
+  }
 }
