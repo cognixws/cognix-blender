@@ -10,6 +10,8 @@ description: Build 3D scenes in Blender with the blender MCP tools — open Blen
 1. `blender_open` (a window the owner can watch; `headless: true` only for batch work).
 2. `scene_info` before changing anything; `new_scene` for a clean start.
 3. Block out with `object_create` at real-world scale (meters, Z up, floor at z=0).
+   Size things with `dimensions`, not `scale`: it is applied to the mesh, so a
+   bevel or a solidify keeps its real width.
 4. Refine with `modifier_add`: BEVEL for edges that catch light, SUBSURF for
    organic shapes (with `smooth: true`), ARRAY/MIRROR for repetition, SOLIDIFY
    for thickness, BOOLEAN to cut.
@@ -18,6 +20,9 @@ description: Build 3D scenes in Blender with the blender MCP tools — open Blen
 6. Light: a key AREA light (500–1500 W) aimed with `look_at`, a weaker fill on
    the other side, and a rim light behind for separation.
 7. `camera_set` with `look_at` on the subject; 35–50 mm for objects, 24 mm for rooms.
+   Keep what matters inside the frame (a bevel you cannot see is wasted).
+   `world_set` for the background color and exposure: a washed-out render
+   usually wants less light energy or `exposure` below 0, not a new camera.
 8. `render` (eevee while iterating, cycles for the final) and **look at the
    image** before saying it is done. Fix what reads wrong and render again.
 9. `save_file` and, if asked, `export` (glb for the web and game engines).

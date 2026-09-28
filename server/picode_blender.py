@@ -23,7 +23,7 @@ BRIDGE = os.path.join(os.path.dirname(HERE), "blender", "bridge.py")
 STATE_DIR = os.path.join(os.path.expanduser("~"), ".picode-blender")
 STATE = os.path.join(STATE_DIR, "bridge.json")
 OUT_DIR = os.path.join(STATE_DIR, "out")
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 
 
 class ToolError(Exception):
@@ -259,12 +259,16 @@ TOOLS = [
     tool("scene_info", "Objects (with transforms, dimensions, materials, modifiers), lights, cameras, materials, render settings.", run=passthrough("scene_info")),
     tool("new_scene", "Start a new empty scene (discards unsaved changes). empty=false keeps Blender's default cube, light and camera.",
          {"empty": {"type": "boolean"}}, run=passthrough("new_scene")),
-    tool("object_create", "Add a primitive mesh.",
+    tool("object_create", "Add a primitive mesh. dimensions sets its size in meters and applies it to the mesh (scale stays 1, so bevels and thickness keep their real size); apply_scale=true does the same after scale.",
          {"primitive": {"type": "string", "enum": ["cube", "sphere", "ico_sphere", "cylinder", "cone", "torus", "plane", "monkey"]},
-          "name": {"type": "string"}, "smooth": {"type": "boolean"}, **TRANSFORM}, ["primitive"], passthrough("object_create")),
-    tool("object_edit", "Change an object: transform, rename, parent (\"\" clears), smooth shading, or delete=true.",
+          "name": {"type": "string"}, "smooth": {"type": "boolean"}, "dimensions": {**VEC3, "description": "size x, y, z in meters"},
+          "apply_scale": {"type": "boolean"}, **TRANSFORM}, ["primitive"], passthrough("object_create")),
+    tool("object_edit", "Change an object: transform, dimensions, apply_scale, rename, parent (\"\" clears), smooth shading, or delete=true.",
          {"name": {"type": "string"}, "rename": {"type": "string"}, "parent": {"type": "string"}, "smooth": {"type": "boolean"},
-          "delete": {"type": "boolean"}, **TRANSFORM}, ["name"], passthrough("object_edit")),
+          "dimensions": VEC3, "apply_scale": {"type": "boolean"}, "delete": {"type": "boolean"}, **TRANSFORM}, ["name"], passthrough("object_edit")),
+    tool("world_set", "Background and exposure: world color (linear RGB) and strength; color management view_transform (AgX, Filmic, Standard), look and exposure.",
+         {"color": COLOR, "strength": {"type": "number"}, "view_transform": {"type": "string"}, "look": {"type": "string"},
+          "exposure": {"type": "number"}}, run=passthrough("world_set")),
     tool("modifier_add", "Add a modifier to an object. settings are the modifier's own Blender properties, e.g. BEVEL {\"width\":0.05,\"segments\":3}, SUBSURF {\"levels\":2}, ARRAY {\"count\":5}, BOOLEAN {\"operation\":\"DIFFERENCE\",\"object\":\"Cutter\"}.",
          {"object": {"type": "string"}, "type": {"type": "string", "description": "BEVEL, SUBSURF, ARRAY, MIRROR, SOLIDIFY, BOOLEAN, …"},
           "name": {"type": "string"}, "settings": {"type": "object"}}, ["object", "type"], passthrough("modifier_add")),

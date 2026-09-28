@@ -10,8 +10,9 @@ Blender opened by `blender_open`.
 | `blender_status` | – | version and file, or `open: false` |
 | `scene_info` | – | objects with transforms, dimensions, materials, modifiers; lights; cameras; render settings |
 | `new_scene` | `empty` (default true) | the new scene |
-| `object_create` | `primitive` (cube, sphere, ico_sphere, cylinder, cone, torus, plane, monkey), `name`, `location`, `rotation_deg`, `scale`, `smooth` | the object |
-| `object_edit` | `name`, transform, `rename`, `parent`, `smooth`, `delete` | the object |
+| `object_create` | `primitive` (cube, sphere, ico_sphere, cylinder, cone, torus, plane, monkey), `name`, `location`, `rotation_deg`, `scale`, `dimensions` (applied to the mesh), `apply_scale`, `smooth` | the object |
+| `object_edit` | `name`, transform, `dimensions`, `apply_scale`, `rename`, `parent`, `smooth`, `delete` | the object |
+| `world_set` | `color`, `strength`, `view_transform`, `look`, `exposure` | the world and color settings |
 | `modifier_add` | `object`, `type`, `name`, `settings` (the modifier's Blender properties) | the object |
 | `material_set` | `object`, `material`, `color`, `metallic`, `roughness`, `transmission`, `alpha`, `emission_color`, `emission_strength` | object and material |
 | `light_set` | `name`, `type`, `energy`, `color`, `size`, `look_at`, transform | the light |

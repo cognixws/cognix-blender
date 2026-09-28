@@ -1,7 +1,7 @@
 {
   "id": "blender",
   "name": "Blender",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "apiVersion": 1,
   "publisher": "PiCode",
   "description": "Model in Blender with your agents: they build the scene, render it and look at the result.",

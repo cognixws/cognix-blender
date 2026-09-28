@@ -130,6 +130,22 @@ def _apply_transform(o, p):
         o.scale = [float(s)] * 3 if isinstance(s, (int, float)) else _vec(s)
 
 
+def _apply_scale(o):
+    _deselect_all()
+    o.select_set(True)
+    bpy.context.view_layer.objects.active = o
+    with bpy.context.temp_override(active_object=o, selected_editable_objects=[o], selected_objects=[o]):
+        bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+
+
+def _apply_size(o, p):
+    if p.get("dimensions") is not None:
+        o.dimensions = _vec(p["dimensions"])
+    if p.get("apply_scale") or p.get("dimensions") is not None:
+        bpy.context.view_layer.update()
+        _apply_scale(o)
+
+
 def op_object_create(p):
     kind = p.get("primitive", "cube")
     if kind not in PRIMITIVES:
@@ -140,6 +156,7 @@ def op_object_create(p):
     if p.get("name"):
         o.name = p["name"]
     _apply_transform(o, p)
+    _apply_size(o, p)
     if p.get("smooth"):
         for poly in o.data.polygons:
             poly.use_smooth = True
@@ -152,6 +169,7 @@ def op_object_edit(p):
         bpy.data.objects.remove(o, do_unlink=True)
         return {"deleted": p["name"]}
     _apply_transform(o, p)
+    _apply_size(o, p)
     if "parent" in p:
         o.parent = _obj(p["parent"]) if p["parent"] else None
     if p.get("rename"):
@@ -245,6 +263,33 @@ def op_camera_set(p):
         _look_at(o, _vec(p["look_at"]))
     bpy.context.scene.camera = o
     return _describe(o)
+
+
+def op_world_set(p):
+    sc = bpy.context.scene
+    world = sc.world or bpy.data.worlds.new("World")
+    sc.world = world
+    world.use_nodes = True
+    bg = world.node_tree.nodes.get("Background")
+    if bg is None:
+        raise ValueError("the world has no Background node")
+    if "color" in p:
+        c = list(p["color"])
+        bg.inputs["Color"].default_value = c + [1.0] if len(c) == 3 else c
+    if "strength" in p:
+        bg.inputs["Strength"].default_value = float(p["strength"])
+    vs = sc.view_settings
+    if "view_transform" in p:
+        vs.view_transform = p["view_transform"]
+    if "look" in p:
+        vs.look = p["look"]
+    if "exposure" in p:
+        vs.exposure = float(p["exposure"])
+    return {
+        "color": list(bg.inputs["Color"].default_value),
+        "strength": bg.inputs["Strength"].default_value,
+        "view_transform": vs.view_transform, "look": vs.look, "exposure": vs.exposure,
+    }
 
 
 def op_render(p):
