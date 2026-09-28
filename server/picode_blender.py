@@ -23,7 +23,8 @@ BRIDGE = os.path.join(os.path.dirname(HERE), "blender", "bridge.py")
 STATE_DIR = os.path.join(os.path.expanduser("~"), ".picode-blender")
 STATE = os.path.join(STATE_DIR, "bridge.json")
 OUT_DIR = os.path.join(STATE_DIR, "out")
-VERSION = "0.2.0"
+VERSION = "0.3.0"
+BRIDGE_VERSION = 3  # blender/bridge.py must report at least this
 
 
 class ToolError(Exception):
@@ -122,10 +123,18 @@ def bridge_alive():
         return None
 
 
+def stale_note(alive):
+    if alive and alive.get("bridge", 0) < BRIDGE_VERSION:
+        return ("This Blender was opened by an older picode-blender, so the newest tools (build, group, duplicate) "
+                "are missing there. Save your work (save_file), then blender_close and blender_open.")
+    return None
+
+
 def blender_open(args):
     alive = bridge_alive()
     if alive:
-        return {"already_open": True, **alive}
+        note = stale_note(alive)
+        return {"already_open": True, **alive, **({"warning": note} if note else {})}
     exe = find_blender()
     check_networking(exe)
     os.makedirs(STATE_DIR, exist_ok=True)
@@ -230,7 +239,14 @@ def viewport_shot(args):
 
 
 def passthrough(op):
-    return lambda args: call(op, args)
+    def run(args):
+        try:
+            return call(op, args)
+        except ToolError as e:
+            if "unknown op" in str(e):
+                raise ToolError(stale_note({"bridge": 0}))
+            raise
+    return run
 
 
 # ---------- tools ----------
@@ -281,6 +297,14 @@ TOOLS = [
           "color": COLOR, "size": {"type": "number"}, "look_at": VEC3, **TRANSFORM}, run=passthrough("light_set")),
     tool("camera_set", "Add or change a camera, make it the scene camera; look_at aims it.",
          {"name": {"type": "string"}, "lens_mm": {"type": "number"}, "look_at": VEC3, **TRANSFORM}, run=passthrough("camera_set")),
+    tool("build", "Run many modeling steps in ONE call, in order — use it instead of dozens of single calls or run_python for scenes with many parts. Each step is {\"op\": ..., \"params\": {...}} with op one of object_create, object_edit, modifier_add, material_set, light_set, camera_set, group, duplicate, world_set, and params exactly as that tool takes. Stops at the first failing step and says which.",
+         {"steps": {"type": "array", "items": {"type": "object", "properties": {"op": {"type": "string"}, "params": {"type": "object"}}, "required": ["op"]}}},
+         ["steps"], passthrough("batch")),
+    tool("group", "Parent objects under a new empty (an assembly: a desk with its chair and monitor), so it moves, rotates and duplicates as one. location defaults to the objects' center on the floor.",
+         {"name": {"type": "string"}, "objects": {"type": "array", "items": {"type": "string"}}, "location": VEC3}, ["name", "objects"], passthrough("group")),
+    tool("duplicate", "Copy an object — or a group with everything under it — count times, each copy moved by offset (meters) and turned by rotation_deg from the previous one. names renames the copies; linked=true shares mesh data.",
+         {"name": {"type": "string"}, "count": {"type": "integer"}, "offset": VEC3, "rotation_deg": VEC3,
+          "names": {"type": "array", "items": {"type": "string"}}, "linked": {"type": "boolean"}}, ["name"], passthrough("duplicate")),
     tool("render", "Render the scene camera to a PNG and return the image. engine: eevee, cycles or workbench.",
          {"engine": {"type": "string"}, "resolution": {"type": "array", "items": {"type": "integer"}, "minItems": 2, "maxItems": 2},
           "samples": {"type": "integer"}, "path": {"type": "string", "description": "where to save (default ~/.picode-blender/out)"}}, run=render),

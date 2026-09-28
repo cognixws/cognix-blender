@@ -27,6 +27,13 @@ description: Build 3D scenes in Blender with the blender MCP tools — open Blen
    image** before saying it is done. Fix what reads wrong and render again.
 9. `save_file` and, if asked, `export` (glb for the web and game engines).
 
+## Many parts
+
+A scene with more than a handful of parts goes through `build`: one call with
+all the steps. Build one assembly (a desk, its chair, its monitor), `group` it,
+then `duplicate` the group with an `offset` — four workstations are one
+`build` call, not a hundred tool calls or a `run_python` script.
+
 ## Rules
 
 - One change at a time, then check: a render or `scene_info`.

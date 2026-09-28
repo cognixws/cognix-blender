@@ -23,6 +23,7 @@ from contextlib import redirect_stdout
 import bpy
 
 HOST = "127.0.0.1"
+BRIDGE_VERSION = 3  # the server compares it: an older Blender session lacks newer ops
 _requests = queue.Queue()
 
 
@@ -88,6 +89,7 @@ def op_ping(p):
         "blender": bpy.app.version_string,
         "file": bpy.data.filepath or None,
         "background": bpy.app.background,
+        "bridge": BRIDGE_VERSION,
     }
 
 
@@ -368,6 +370,85 @@ def op_run_python(p):
     except TypeError:
         res = repr(res)
     return {"stdout": out.getvalue()[-20000:], "result": res}
+
+
+def op_group(p):
+    """An empty that parents the given objects, so a whole assembly moves,
+    rotates and duplicates as one."""
+    objs = [_obj(n) for n in p["objects"]]
+    if p.get("location") is not None:
+        loc = _vec(p["location"])
+    else:
+        xs = [o.matrix_world.translation for o in objs]
+        loc = [sum(v[i] for v in xs) / len(xs) for i in range(2)] + [min(v[2] for v in xs)]
+    empty = bpy.data.objects.new(p["name"], None)
+    empty.empty_display_type = "PLAIN_AXES"
+    empty.location = loc
+    bpy.context.scene.collection.objects.link(empty)
+    bpy.context.view_layer.update()
+    inv = empty.matrix_world.inverted()
+    for o in objs:
+        world = o.matrix_world.copy()
+        o.parent = empty
+        o.matrix_parent_inverse = inv
+        o.matrix_world = world
+    return {"group": empty.name, "location": [round(x, 4) for x in empty.location], "children": [o.name for o in objs]}
+
+
+def _copy_tree(o, parent, suffix, linked):
+    c = o.copy()
+    if o.data is not None and not linked:
+        c.data = o.data.copy()
+    c.name = o.name + suffix
+    for coll in o.users_collection:
+        coll.objects.link(c)
+    c.parent = parent if parent is not None else o.parent
+    c.matrix_parent_inverse = o.matrix_parent_inverse.copy()
+    for ch in o.children:
+        _copy_tree(ch, c, suffix, linked)
+    return c
+
+
+def op_duplicate(p):
+    """Copy an object with everything parented under it, count times, each
+    copy moved by offset (and turned by rotation_deg) from the previous one."""
+    src = _obj(p["name"])
+    count = int(p.get("count", 1))
+    if not 1 <= count <= 100:
+        raise ValueError("count must be 1..100")
+    offset = _vec(p.get("offset") or [0, 0, 0])
+    turn = _vec(p.get("rotation_deg") or [0, 0, 0])
+    names = p.get("names") or []
+    made = []
+    for i in range(1, count + 1):
+        suffix = "_%d" % (i + 1)
+        c = _copy_tree(src, None, suffix, bool(p.get("linked")))
+        if i - 1 < len(names) and names[i - 1]:
+            c.name = names[i - 1]
+        c.location = [src.location[k] + offset[k] * i for k in range(3)]
+        c.rotation_euler = [src.rotation_euler[k] + math.radians(turn[k]) * i for k in range(3)]
+        made.append(c.name)
+    bpy.context.view_layer.update()
+    return {"copies": made}
+
+
+BATCH_OPS = ("object_create", "object_edit", "modifier_add", "material_set", "light_set", "camera_set", "group", "duplicate", "world_set")
+
+
+def op_batch(p):
+    """Run many steps in one call, in order. Stops at the first failure and
+    says which step failed; the steps before it stay done."""
+    results = []
+    for i, step in enumerate(p.get("steps") or []):
+        name = step.get("op")
+        if name not in BATCH_OPS:
+            raise ValueError("step %d: op must be one of %s" % (i, ", ".join(BATCH_OPS)))
+        try:
+            r = OPS[name](step.get("params") or {})
+        except Exception as e:
+            raise ValueError("step %d (%s) failed after %d done: %s: %s" % (i, name, i, type(e).__name__, e))
+        results.append({"op": name, "name": r.get("name") or r.get("group") or r.get("object"), "copies": r.get("copies")})
+    return {"done": len(results), "steps": results}
 
 
 OPS = {name[3:]: fn for name, fn in globals().items() if name.startswith("op_")}

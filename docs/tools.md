@@ -17,6 +17,9 @@ Blender opened by `blender_open`.
 | `material_set` | `object`, `material`, `color`, `metallic`, `roughness`, `transmission`, `alpha`, `emission_color`, `emission_strength` | object and material |
 | `light_set` | `name`, `type`, `energy`, `color`, `size`, `look_at`, transform | the light |
 | `camera_set` | `name`, `lens_mm`, `look_at`, transform | the camera (made the scene camera) |
+| `build` | `steps`: `[{op, params}]` with op object_create, object_edit, modifier_add, material_set, light_set, camera_set, group, duplicate, world_set | steps done; stops at the first failing step and names it |
+| `group` | `name`, `objects`, `location` | an empty parenting the objects (an assembly) |
+| `duplicate` | `name`, `count`, `offset`, `rotation_deg`, `names`, `linked` | the copies (a group copies everything under it) |
 | `render` | `engine` (eevee, cycles, workbench), `resolution`, `samples`, `path` | the PNG as an image, and its path |
 | `viewport_shot` | – | the 3D viewport as an image (window mode only) |
 | `export` | `format` (glb, gltf, obj, fbx, stl), `path` | the path |
@@ -34,3 +37,9 @@ system picks (a fixed port can fall in a range Windows reserves), writes it to
 the port file, and serves one JSON request per line, run on Blender's main
 thread. The server keeps the port and token in `~/.picode-blender/bridge.json`
 (0600), so every agent's server reaches the same Blender.
+
+## Versions
+
+The bridge reports `bridge` in `blender_status`. A Blender opened by an older
+picode-blender keeps its old bridge until it is closed: `blender_open` says so
+in `warning`, and a tool the old bridge lacks answers with the same advice.
