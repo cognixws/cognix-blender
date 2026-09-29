@@ -23,7 +23,7 @@ BRIDGE = os.path.join(os.path.dirname(HERE), "blender", "bridge.py")
 STATE_DIR = os.path.join(os.path.expanduser("~"), ".picode-blender")
 STATE = os.path.join(STATE_DIR, "bridge.json")
 OUT_DIR = os.path.join(STATE_DIR, "out")
-VERSION = "0.3.0"
+VERSION = "0.4.0"
 BRIDGE_VERSION = 3  # blender/bridge.py must report at least this
 
 

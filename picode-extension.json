@@ -1,14 +1,74 @@
 {
   "id": "blender",
   "name": "Blender",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "apiVersion": 1,
   "publisher": "PiCode",
   "description": "Model in Blender with your agents: they build the scene, render it and look at the result.",
   "agent": {
     "mcpServers": {
-      "blender": { "command": "python3", "args": ["${extensionDir}/server/picode_blender.py"] }
+      "blender": {
+        "command": "python3",
+        "args": [
+          "${extensionDir}/server/picode_blender.py"
+        ]
+      }
     },
-    "skills": ["skills/blender-modeling"]
+    "skills": [
+      "skills/blender-modeling"
+    ]
+  },
+  "process": {
+    "command": "python3",
+    "args": [
+      "${extensionDir}/server/picode_blender_page.py"
+    ]
+  },
+  "ui": {
+    "pages": [
+      {
+        "id": "scene",
+        "title": "Blender scene",
+        "path": "ui/scene.html"
+      }
+    ]
+  },
+  "contributes": {
+    "commands": [
+      {
+        "id": "open-scene",
+        "title": "Open the Blender scene",
+        "page": "scene"
+      },
+      {
+        "id": "snapshot",
+        "title": "Take a Blender snapshot",
+        "request": {
+          "method": "POST",
+          "path": "/snapshot"
+        }
+      }
+    ],
+    "openWith": [
+      {
+        "pattern": "*.blend",
+        "page": "scene",
+        "title": "Open in Blender"
+      }
+    ],
+    "menus": {
+      "workspace": [
+        "open-scene",
+        "snapshot"
+      ],
+      "agent": [
+        "snapshot"
+      ]
+    }
+  },
+  "activation": {
+    "files": [
+      "*.blend"
+    ]
   }
 }

@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blender scene</title>
+<link rel="stylesheet" href="../__picode/tokens.css">
+<style>
+  .stack { display: grid; gap: 12px; max-width: 880px; }
+  .head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+  .shot { width: 100%; border-radius: var(--pc-radius); border: 1px solid var(--pc-border); display: block; background: var(--pc-bg); }
+  .objects { list-style: none; margin: 8px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 4px 16px; }
+  .objects li { display: flex; justify-content: space-between; gap: 8px; min-width: 0; }
+  .objects .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .note { margin: 8px 0 0; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body class="pc-page">
+<div class="stack">
+  <div class="pc-card" id="file-card" hidden>
+    <div class="head">
+      <div>
+        <h2 class="pc-title" id="file-name"></h2>
+        <div class="pc-muted pc-code" id="file-path"></div>
+      </div>
+      <button class="pc-button primary" id="open-file" type="button">Open in Blender</button>
+    </div>
+    <p class="pc-muted note" id="file-note" role="status"></p>
+  </div>
+
+  <div class="pc-card">
+    <div class="head">
+      <div>
+        <h2 class="pc-title">Blender</h2>
+        <div class="pc-muted" id="status" role="status">Checking…</div>
+      </div>
+      <div class="pc-row">
+        <button class="pc-button" id="refresh" type="button">Refresh</button>
+        <button class="pc-button primary" id="snap" type="button" disabled>Take a snapshot</button>
+      </div>
+    </div>
+    <p class="pc-warn note" id="warning" hidden></p>
+  </div>
+
+  <div class="pc-card" id="shot-card" hidden>
+    <img class="shot" id="shot" alt="Blender's 3D viewport">
+    <p class="pc-muted note pc-code" id="shot-path"></p>
+  </div>
+
+  <div class="pc-card" id="objects-card" hidden>
+    <h2 class="pc-title" id="objects-title">Objects</h2>
+    <ul class="objects" id="objects"></ul>
+  </div>
+</div>
+<script>
+(async () => {
+  const $ = (id) => document.getElementById(id);
+  await picode.use("theme");
+  const proc = await picode.use("process");
+  const ctx = await picode.use("context");
+  if (!proc) { $("status").textContent = "Turn Blender on in a workspace to use this page."; return; }
+
+  async function call(path, body) {
+    const r = await proc.request(path, body === undefined ? { method: "GET" } : { method: "POST", body: JSON.stringify(body), contentType: "application/json" });
+    let data = {};
+    try { data = JSON.parse(r.body || "{}"); } catch { data = { message: r.body }; }
+    if (r.status >= 400) throw new Error(data.message || "Blender's program answered " + r.status);
+    return data;
+  }
+
+  async function refresh() {
+    $("refresh").disabled = true;
+    try {
+      const s = await call("/status");
+      $("snap").disabled = !s.open || s.background;
+      if (!s.open) {
+        $("status").textContent = "Blender is not open. Ask an agent to open it, or open a .blend file below.";
+        $("objects-card").hidden = true;
+      } else {
+        const file = s.file ? s.file.split(/[\\/]/).pop() : "an unsaved scene";
+        $("status").textContent = "Blender " + (s.blender || "") + " · " + file + (s.background ? " · no window (background)" : "");
+        const objs = s.objects || [];
+        $("objects-card").hidden = false;
+        $("objects-title").textContent = objs.length ? "Objects (" + objs.length + ")" : "Objects";
+        $("objects").innerHTML = "";
+        if (!objs.length) {
+          const li = document.createElement("li");
+          li.className = "pc-muted";
+          li.textContent = "The scene is empty.";
+          $("objects").appendChild(li);
+        }
+        for (const o of objs) {
+          const li = document.createElement("li");
+          const n = document.createElement("span"); n.className = "name"; n.textContent = o.name;
+          const t = document.createElement("span"); t.className = "pc-muted"; t.textContent = String(o.type || "").toLowerCase();
+          li.append(n, t);
+          $("objects").appendChild(li);
+        }
+      }
+      $("warning").hidden = !s.warning;
+      $("warning").textContent = s.warning || "";
+    } catch (e) {
+      $("status").textContent = e.message;
+      $("snap").disabled = true;
+    } finally {
+      $("refresh").disabled = false;
+    }
+  }
+
+  $("refresh").onclick = refresh;
+  $("snap").onclick = async () => {
+    $("snap").disabled = true;
+    $("snap").textContent = "Taking…";
+    try {
+      const shot = await call("/snapshot", {});
+      $("shot").src = "data:image/png;base64," + shot.image;
+      $("shot-path").textContent = "Saved to " + shot.path;
+      $("shot-card").hidden = false;
+    } catch (e) {
+      $("status").textContent = e.message;
+    } finally {
+      $("snap").textContent = "Take a snapshot";
+      $("snap").disabled = false;
+    }
+  };
+
+  // Opened with a .blend file (PiCode's Open with): offer to open it.
+  let file = null;
+  function showFile(c) {
+    file = c && c.path && /\.blend$/i.test(c.path) ? c.path : null;
+    $("file-card").hidden = !file;
+    if (!file) return;
+    $("file-name").textContent = file.split(/[\\/]/).pop();
+    $("file-path").textContent = file;
+    $("file-note").textContent = "";
+  }
+  if (ctx) { showFile(ctx.current()); ctx.onChange(showFile); }
+  $("open-file").onclick = async () => {
+    if (!file) return;
+    $("open-file").disabled = true;
+    $("file-note").textContent = "Opening Blender…";
+    try {
+      const r = await call("/open", { path: file });
+      $("file-note").textContent = r.message;
+      await refresh();
+    } catch (e) {
+      $("file-note").textContent = e.message;
+    } finally {
+      $("open-file").disabled = false;
+    }
+  };
+
+  await refresh();
+  setInterval(() => { if (!document.hidden) refresh(); }, 10000);
+})();
+</script>
+</body>
+</html>

@@ -63,3 +63,6 @@ docs/                   this plan, the tool reference, decisions
 2. The modeling tools, render and viewport capture; skills.
 3. A demo scene built end to end by an agent, with computer use checking the window.
 4. Marketing video (HyperFrames) from real captures of PiCode + Blender.
+5. v0.4 (PiCode ADR-0230 E3–E4): the Blender scene page, Open with for
+   `.blend`, menu and palette commands, activation by `*.blend`, and the
+   background program that serves them. Done.
