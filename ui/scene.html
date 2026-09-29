@@ -75,7 +75,7 @@
       const s = await call("/status");
       $("snap").disabled = !s.open || s.background;
       if (!s.open) {
-        $("status").textContent = "Blender is not open. Ask an agent to open it, or open a .blend file below.";
+        $("status").textContent = "Blender is not open. Ask an agent to open it, or open a .blend file with Open in Blender in the Files page.";
         $("objects-card").hidden = true;
       } else {
         const file = s.file ? s.file.split(/[\\/]/).pop() : "an unsaved scene";
