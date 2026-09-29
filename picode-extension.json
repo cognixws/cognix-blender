@@ -1,10 +1,11 @@
 {
   "id": "blender",
   "name": "Blender",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "apiVersion": 1,
   "publisher": "PiCode",
   "description": "Model in Blender with your agents: they build the scene, render it and look at the result.",
+  "icon": "icons/blender.svg",
   "agent": {
     "mcpServers": {
       "blender": {
