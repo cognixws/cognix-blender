@@ -9,7 +9,7 @@ result, and you watch it happen in Blender's own window.
 ## Install
 
 In PiCode: **Extensions → Install extension**, paste
-`https://github.com/cognixws/picode-blender`, review, **Install**, then turn it
+`https://github.com/cognixws/cognix-blender`, review, **Install**, then turn it
 on in the workspaces where you want it.
 
 ## In PiCode
